@@ -8,15 +8,19 @@ It reuses the official sign graphics already in this repository
 (`collection/svg/`, © Väylävirasto, CC0) and adds plain-language
 names and meanings parsed from Wikipedia.
 
+## ▶️ Play it now
+
+**<https://nkzinovyeva.github.io/roadSignsTrainer/>**
+
+Nothing to install — open the link in any browser, on phone or computer. Your
+progress is saved in that browser (localStorage); nothing is sent anywhere.
+
 ![Home screen](README-assets/home.png)
 
-## Run it (the easy way)
+## Run it offline / from your own copy
 
 1. Download / clone this repository.
 2. Open **`index.html`** in any modern browser (double-click it).
-
-That's it. Your progress is saved in the browser (localStorage); nothing is
-sent anywhere.
 
 > If sign images don't appear, your browser is blocking local files. Use the
 > "local server" option below, or open it in Firefox (which allows it).
@@ -32,6 +36,8 @@ python3 -m http.server 8000
 Then open <http://localhost:8000/>.
 
 ## What's inside
+
+![Study screen](README-assets/study.png)
 
 | Module | What it does |
 |---|---|
