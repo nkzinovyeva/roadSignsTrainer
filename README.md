@@ -96,10 +96,7 @@ official [Väylä road-sign pages](https://vayla.fi/en/transport-network/road-si
 ### Coverage & honesty note
 
 - **All 370 signs are named** in both Finnish and English, covering every group
-  A–I. The `"source"` field records where a name came from (`vayla`, `curated`,
-  `wikipedia`).
-- Group **I** is *Other devices for traffic control* (barriers, edge posts,
-  reindeer-area signs, etc.) — earlier drafts mislabelled it "road markings".
+  A–I.
 - A few official Väylä titles are duplicated across mirror/variant signs (e.g.
   `Bend`, `Crossroad`, `Filling station`); where helpful, a short
   `(right)/(left)/(odd days)` suffix keeps them distinguishable.
