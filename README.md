@@ -122,5 +122,12 @@ official [Väylä road-sign pages](https://vayla.fi/en/transport-network/road-si
     └── svg/          # the official sign graphics
 ```
 
-Sign graphics © Väylävirasto / Finnish Transport Infrastructure Agency (CC0).
+## License
+
+The code in this repository is released under the [MIT License](LICENSE).
+
+Sign graphics © Väylävirasto / Finnish Transport Infrastructure Agency (CC0,
+public domain) — they keep their own terms and are not covered by the MIT
+license above.
+
 This is a home study aid, **not** an official exam or reference.
