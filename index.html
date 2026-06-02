@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Liikennemerkit · Finnish road-sign trainer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <button class="brand" data-nav="home" title="Home">
+      <span class="brand-mark">🚸</span>
+      <span class="brand-text">Liikennemerkit</span>
+    </button>
+    <div class="topbar-right">
+      <label class="lang-toggle" title="Answer language shown in quizzes">
+        <span>Answers</span>
+        <select id="answerLang">
+          <option value="fi">Suomi</option>
+          <option value="both">Suomi + English</option>
+          <option value="en">English</option>
+        </select>
+      </label>
+    </div>
+  </header>
+
+  <main id="view" class="view"><!-- views render here --></main>
+
+  <footer class="footer">
+    Sign graphics © Väylävirasto (CC0) · names from Wikipedia ·
+    a home study app, not an official exam.
+  </footer>
+
+  <!-- Data is loaded as window.SIGNS so the app runs straight from file:// -->
+  <script src="data/signs.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
