@@ -33,6 +33,8 @@ Then open <http://localhost:8000/>.
 
 ## What's inside
 
+![Study screen](README-assets/study.png)
+
 | Module | What it does |
 |---|---|
 | 🃏 **Study (flashcards)** | A sign appears; recall its meaning, hit *Show answer*, then rate yourself **Forgot / Not sure / I knew it**. A Leitner-style memory box makes forgotten signs come back more often. |
