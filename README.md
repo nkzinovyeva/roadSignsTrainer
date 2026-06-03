@@ -45,8 +45,17 @@ Then open <http://localhost:8000/>.
 | 📚 **Category training** | Pick one group (Warning, Priority, Prohibitory…) and take a focused 10-question multiple-choice quiz. |
 | 🎓 **Exam simulator** | 20–30 random questions, a strict **30-second timer** per question, and a pass threshold — as close as we get to the real theory test. |
 | ⚡ **Time attack** | 60 seconds. Name as many signs in a row as you can; one miss resets the streak. Your best run is saved. |
-| 📈 **My weak spots** | The 5 signs you've missed most over the last 7 days, with a one-click drill. |
+| 📈 **My weak spots** | Every sign you've ever missed and not yet mastered, worst-first, with a one-click drill of the top 5. A sign clears once you answer it correctly 3× in a row — or tap ✓ to dismiss it. (Accuracy figures shown there cover the last 7 days.) |
 | 🔎 **Browse all signs** | Flip through every sign by category, including road markings. |
+
+### Progress dashboard 📊
+
+The home screen shows live counters: **signs practised** (every sign you've
+answered), **well known** (memory level 4–5), **weak spots** (all-time misses
+not yet cleared), and your **best time-attack** streak. Tap any of the first
+three to see exactly which signs are in that group. **↺ Reset progress** wipes
+all learning data — memory boxes, history, weak spots and your best streak —
+while keeping your answer-language choice.
 
 ### Signature feature: anti-confusion 🪧
 

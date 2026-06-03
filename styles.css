@@ -93,11 +93,25 @@ button { font-family: inherit; }
 .menu-card .title { font-size: 1.12rem; font-weight: 700; }
 .menu-card .desc { color: var(--muted); font-size: .9rem; }
 
+/* ---- sign tiles (Browse + progress lists) ---- */
+.sign-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; margin-top: 16px; }
+.sign-card { align-items: center; text-align: center; cursor: default; }
+.sign-card .signframe.sm { min-height: 96px; width: 100%; }
+.sign-card .title { font-size: .95rem; }
+.cat-head { margin-top: 24px; }
+
+/* a row of action buttons, centred */
+.row.actions { justify-content: center; margin-top: 20px; }
+
 .stat-strip { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 18px; }
 .stat-chip {
   background: var(--card); border: 1px solid var(--line); border-radius: 12px;
   padding: 10px 16px; box-shadow: var(--shadow); min-width: 120px;
+  font: inherit; text-align: left; color: inherit;
 }
+button.stat-chip.tappable { cursor: pointer; transition: transform .08s ease, box-shadow .12s ease, border-color .12s ease; }
+button.stat-chip.tappable:hover { transform: translateY(-2px); border-color: var(--blue); box-shadow: 0 6px 16px rgba(0,0,0,.14); }
+button.stat-chip:disabled { cursor: default; opacity: .55; }
 .stat-chip b { display: block; font-size: 1.5rem; color: var(--blue); line-height: 1.1; }
 .stat-chip span { font-size: .78rem; color: var(--muted); }
 
@@ -188,6 +202,13 @@ button { font-family: inherit; }
 .weak-row img { height: 54px; width: 54px; object-fit: contain; }
 .weak-bar { flex: 1; height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; }
 .weak-bar > i { display: block; height: 100%; background: var(--red); }
+.weak-dismiss {
+  flex: none; width: 34px; height: 34px; border-radius: 50%;
+  border: 1px solid var(--line); background: var(--card); color: var(--green);
+  font-size: 1rem; line-height: 1; cursor: pointer;
+  transition: background .12s ease, border-color .12s ease, transform .08s ease;
+}
+.weak-dismiss:hover { background: var(--green); border-color: var(--green); color: #fff; transform: scale(1.08); }
 
 .empty { text-align: center; color: var(--muted); padding: 40px 10px; }
 .feedback { text-align:center; font-weight: 800; margin-top: 14px; font-size: 1.1rem; }

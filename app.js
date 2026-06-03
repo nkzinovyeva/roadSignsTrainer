@@ -62,10 +62,12 @@
     LS.set("lm_history", history);
     LS.set("lm_records", records);
     LS.set("lm_exams", []);
+    LS.set("lm_weak_dismissed", {});
   }
+  const HISTORY_LIMIT = 800; // most recent attempts kept in localStorage
   function logAttempt(id, correct) {
     history.push({ ts: Date.now(), id, correct });
-    if (history.length > 800) history = history.slice(-800);
+    if (history.length > HISTORY_LIMIT) history = history.slice(-HISTORY_LIMIT);
     LS.set("lm_history", history);
     const p = (progress[id] = progress[id] || {
       box: 1,
@@ -105,6 +107,13 @@
   const imgUrl = (s) => IMG_BASE + s.image;
   const signImg = (s, cls = "") =>
     `<img src="${esc(imgUrl(s))}" alt="${esc(s.id)}" class="${cls}" loading="lazy" />`;
+  // One sign tile shared by Browse and the progress lists.
+  const signCard = (s, subtext) =>
+    `<div class="menu-card sign-card">
+       <div class="signframe sm">${signImg(s)}</div>
+       <div class="title">${label(s)}</div>
+       <div class="desc">${subtext}</div>
+     </div>`;
 
   // Display label for an answer option / answer reveal, honouring language setting.
   function label(s, lang = settings.answerLang) {
@@ -198,28 +207,32 @@
 
   // ---------- router ----------
   const Views = {};
-  let currentView = "home",
-    currentArg;
-  function nav(name, arg) {
+  let currentView = "home";
+  function nav(name) {
     currentView = name;
-    currentArg = arg;
     view.innerHTML = "";
-    (Views[name] || Views.home)(arg);
+    (Views[name] || Views.home)();
     window.scrollTo(0, 0);
   }
   document.addEventListener("click", (e) => {
     const t = e.target.closest("[data-nav]");
     if (t) nav(t.getAttribute("data-nav"));
   });
+  // Static, language-aware views that should re-render live when the answer language setting changes.
+  const LANG_AWARE_VIEWS = [
+    "home",
+    "categories",
+    "stats",
+    "browse",
+    "practised",
+    "wellknown",
+    "weakspots",
+  ];
   $("#answerLang").value = settings.answerLang;
   $("#answerLang").addEventListener("change", (e) => {
     settings.answerLang = e.target.value;
     saveSettings();
-    // Re-render the static, language-aware views so the change is reflected
-    // live. Interactive flows (study, quiz, exam, time attack) pick up the new
-    // language on their next card/question rather than restarting mid-flow.
-    if (["home", "categories", "stats", "browse"].includes(currentView))
-      nav(currentView, currentArg);
+    if (LANG_AWARE_VIEWS.includes(currentView)) nav(currentView);
   });
 
   // ======================================================================
@@ -228,12 +241,14 @@
   Views.home = () => {
     const learned = Object.values(progress).filter((p) => p.box >= 4).length;
     const seen = Object.keys(progress).length;
+    const weakCount = weakStats().weak.length;
     view.innerHTML = `
       <h1>Finnish road-sign trainer</h1>
       <p class="sub">${POOL.length} signs · ${CATS.length} categories · learn them, then beat the exam.</p>
       <div class="stat-strip">
-        <div class="stat-chip"><b>${seen}</b><span>signs practised</span></div>
-        <div class="stat-chip"><b>${learned}</b><span>well known</span></div>
+        <button class="stat-chip${seen ? " tappable" : ""}" data-nav="practised"${seen ? "" : " disabled"}><b>${seen}</b><span>signs practised</span></button>
+        <button class="stat-chip${learned ? " tappable" : ""}" data-nav="wellknown"${learned ? "" : " disabled"}><b>${learned}</b><span>well known</span></button>
+        <button class="stat-chip${weakCount ? " tappable" : ""}" data-nav="weakspots"${weakCount ? "" : " disabled"}><b>${weakCount}</b><span>weak spots</span></button>
         <div class="stat-chip"><b>${records.timeAttack}</b><span>best time-attack</span></div>
       </div>
       <div class="menu-grid">
@@ -244,7 +259,7 @@
         ${menuCard("stats", "📈", "My weak spots", "The signs you confuse most over the past week.")}
         ${menuCard("browse", "🔎", "Browse all signs", "Flip through every sign by category, including road markings.")}
       </div>
-      <div class="row" style="margin-top:18px;justify-content:center">
+      <div class="row actions">
         <button class="btn ghost" id="resetProgress">↺ Reset progress</button>
       </div>`;
     $("#resetProgress").onclick = () => {
@@ -313,18 +328,17 @@
             <button class="grade soft" data-g="1">Not sure<small></small></button>
             <button class="grade know" data-g="2">I knew it<small></small></button>
           </div>`;
-        ctrl.querySelectorAll(".grade").forEach(
-          (b) =>
-            (b.onclick = () => {
-              const g = +b.dataset.g;
-              logAttempt(current.id, g === 2);
-              if (g === 1 && progress[current.id]) {
-                progress[current.id].box = 2;
-                saveProgress();
-              }
-              draw();
-            }),
-        );
+        ctrl.querySelectorAll(".grade").forEach((b) => {
+          b.onclick = () => {
+            const g = +b.dataset.g;
+            logAttempt(current.id, g === 2);
+            if (g === 1 && progress[current.id]) {
+              progress[current.id].box = 2;
+              saveProgress();
+            }
+            draw();
+          };
+        });
       }
     }
     draw();
@@ -361,9 +375,9 @@
           </button>`,
         ).join("")}
       </div>`;
-    view
-      .querySelectorAll(".cat")
-      .forEach((b) => (b.onclick = () => startQuiz(b.dataset.cat)));
+    view.querySelectorAll(".cat").forEach((b) => {
+      b.onclick = () => startQuiz(b.dataset.cat);
+    });
   };
 
   // ======================================================================
@@ -407,7 +421,9 @@
         </div>`;
       $("#opts")
         .querySelectorAll(".option")
-        .forEach((b) => (b.onclick = () => choose(b, q, opts)));
+        .forEach((b) => {
+          b.onclick = () => choose(b, q, opts);
+        });
     }
     function choose(btn, q, opts) {
       const chosenId = btn.dataset.id;
@@ -480,7 +496,7 @@
             .join("")}</div>`
             : `<p class="feedback ok">Perfect round! 🎉</p>`
         }
-        <div class="row" style="margin-top:20px;justify-content:center">
+        <div class="row actions">
           <button class="btn" id="again">Try again</button>
           <button class="btn ghost" data-nav="home">Home</button>
         </div>
@@ -541,7 +557,9 @@
         </div>`;
       $("#opts")
         .querySelectorAll(".option")
-        .forEach((b) => (b.onclick = () => answer(b.dataset.id, q)));
+        .forEach((b) => {
+          b.onclick = () => answer(b.dataset.id, q);
+        });
       // timer
       let left = perQ;
       const bar = $("#tbar"),
@@ -618,7 +636,7 @@
                   .join("")}</div>`
               : `<p class="feedback ok">Flawless! 🎉</p>`
           }
-          <div class="row" style="margin-top:20px;justify-content:center">
+          <div class="row actions">
             <button class="btn" data-nav="examStart">New exam</button>
             <button class="btn ghost" data-nav="home">Home</button>
           </div>
@@ -642,8 +660,9 @@
     $("#go").onclick = runTimeAttack;
   };
 
+  const TIME_ATTACK_SECONDS = 60;
   function runTimeAttack() {
-    let left = 60,
+    let left = TIME_ATTACK_SECONDS,
       streak = 0,
       best = 0,
       total = 0,
@@ -668,7 +687,9 @@
         </div>`;
       $("#opts")
         .querySelectorAll(".option")
-        .forEach((b) => (b.onclick = () => pick(b.dataset.id)));
+        .forEach((b) => {
+          b.onclick = () => pick(b.dataset.id);
+        });
     }
     function pick(id) {
       total++;
@@ -697,7 +718,7 @@
         bar = $("#tbar");
       if (c) c.textContent = left + "s";
       if (bar) {
-        bar.style.width = (left / 60) * 100 + "%";
+        bar.style.width = (left / TIME_ATTACK_SECONDS) * 100 + "%";
         bar.style.background = left < 15 ? "var(--red)" : "var(--green)";
       }
       if (left <= 0) {
@@ -718,7 +739,7 @@
           <p class="sub">Time! Your best streak this run:</p>
           <div class="streak-num">${best}</div>
           <p class="sub">${total} answered · personal best ${records.timeAttack}</p>
-          <div class="row" style="margin-top:18px;justify-content:center">
+          <div class="row actions">
             <button class="btn" data-nav="timeStart">Play again</button>
             <button class="btn ghost" data-nav="home">Home</button>
           </div>
@@ -732,31 +753,68 @@
   // ======================================================================
   //  STATS / WEAK SPOTS
   // ======================================================================
-  Views.stats = () => {
-    const weekAgo = Date.now() - 7 * 864e5;
-    const recent = history.filter((h) => h.ts >= weekAgo);
+  // Number of correct answers in a row a sign needs since its last miss to be
+  // considered "redeemed" and drop off the weak-spots list automatically.
+  const REDEEM_STREAK = 3;
+  const WEEK_MS = 7 * 24 * 60 * 60 * 1000; // window for the activity summary
+  // Shared weak-spots computation used by both the home chip and the Stats view,
+  // so the headline count always matches the list. The weak list is ALL-TIME —
+  // a sign stays weak until redeemed (REDEEM_STREAK correct in a row since its
+  // last miss) or dismissed; it never expires by time. The answer tallies
+  // returned alongside are a separate last-7-days activity snapshot.
+  function weakStats() {
+    // Per sign: tallies, current correct-streak since last miss, and last-miss ts.
     const agg = {};
-    for (const h of recent) {
-      const a = (agg[h.id] = agg[h.id] || { wrong: 0, total: 0 });
+    for (const h of history) {
+      const a = (agg[h.id] = agg[h.id] || {
+        wrong: 0,
+        total: 0,
+        streak: 0,
+        lastWrong: 0,
+      });
       a.total++;
-      if (!h.correct) a.wrong++;
+      if (h.correct) {
+        a.streak++;
+      } else {
+        a.wrong++;
+        a.streak = 0; // a miss breaks the redeem streak
+        a.lastWrong = h.ts;
+      }
     }
+    // Manually dismissed signs; a dismissal lapses if the sign is missed again.
+    const dismissed = LS.get("lm_weak_dismissed", {});
+    const isDismissed = (id) =>
+      dismissed[id] != null && (agg[id]?.lastWrong || 0) <= dismissed[id];
     const weak = Object.entries(agg)
-      .filter(([, a]) => a.wrong > 0)
+      .filter(([id, a]) => a.wrong > 0) // missed at least once this week
+      .filter(([id, a]) => a.streak < REDEEM_STREAK) // not yet redeemed
+      .filter(([id]) => !isDismissed(id)) // not manually dismissed
       .map(([id, a]) => ({ s: BY_ID[id], ...a, rate: a.wrong / a.total }))
       .filter((x) => x.s)
-      .sort((a, b) => b.wrong - a.wrong || b.rate - a.rate)
-      .slice(0, 5);
-    const totalA = recent.length,
-      totalW = recent.filter((h) => !h.correct).length;
+      .sort((a, b) => b.wrong - a.wrong || b.rate - a.rate);
+    // Activity summary: last 7 days only (kept windowed on purpose).
+    const weekAgo = Date.now() - WEEK_MS;
+    const recent = history.filter((h) => h.ts >= weekAgo);
+    return {
+      weak,
+      totalA: recent.length,
+      totalW: recent.filter((h) => !h.correct).length,
+      touched: new Set(recent.map((h) => h.id)).size,
+    };
+  }
+  Views.stats = () => {
+    const { weak: weakAll, totalA, totalW, touched } = weakStats();
+    const weak = weakAll.slice(0, 5);
     view.innerHTML = `
       ${backBar()}
       <h1>📈 My weak spots</h1>
-      <p class="sub">Based on the last 7 days of practice.</p>
+      <p class="sub">Every sign you've ever missed stays here until you get it
+      right ${REDEEM_STREAK}× in a row — or tap ✓ to dismiss it. The numbers
+      below cover the last 7 days.</p>
       <div class="stat-strip">
         <div class="stat-chip"><b>${totalA}</b><span>answers</span></div>
         <div class="stat-chip"><b>${totalA ? Math.round((1 - totalW / totalA) * 100) : 0}%</b><span>accuracy</span></div>
-        <div class="stat-chip"><b>${Object.keys(agg).length}</b><span>signs touched</span></div>
+        <div class="stat-chip"><b>${touched}</b><span>signs touched</span></div>
       </div>
       <div class="panel" style="margin-top:18px">
         <h2>Top 5 signs you miss</h2>
@@ -767,16 +825,25 @@
                   (w) => `
           <div class="weak-row">
             ${signImg(w.s)}
-            <div style="min-width:130px"><b>${primaryName(w.s)}</b><br><span class="cat-sub">${subEn(w.s)}${esc(w.s.id)}</span></div>
+            <div style="min-width:130px"><b>${primaryName(w.s)}</b><br><span class="cat-sub">${subEn(w.s)}${esc(w.s.id)}${w.streak ? ` · ${w.streak}/${REDEEM_STREAK} to clear` : ""}</span></div>
             <div class="weak-bar"><i style="width:${Math.round(w.rate * 100)}%"></i></div>
             <div style="width:70px;text-align:right" class="cat-sub">${w.wrong}/${w.total} miss</div>
+            <button class="weak-dismiss" data-dismiss="${esc(w.s.id)}" title="Got it — remove from weak spots">✓</button>
           </div>`,
                 )
                 .join("")
             : `<p class="empty">No mistakes logged yet this week — go do a quiz and come back! 🚦</p>`
         }
-        ${weak.length ? `<button class="btn wide" id="drill" style="margin-top:16px">Drill these 5 now</button>` : ""}
+        ${weak.length ? `<button class="btn wide" id="drill" style="margin-top:16px">Drill this set now</button>` : ""}
       </div>`;
+    view.querySelectorAll("[data-dismiss]").forEach((b) => {
+      b.onclick = () => {
+        const dismissed = LS.get("lm_weak_dismissed", {});
+        dismissed[b.dataset.dismiss] = Date.now();
+        LS.set("lm_weak_dismissed", dismissed);
+        Views.stats();
+      };
+    });
     const drill = $("#drill");
     if (drill)
       drill.onclick = () =>
@@ -789,46 +856,74 @@
   };
 
   // ======================================================================
+  //  PROGRESS LISTS (tap a home stat chip → see those signs)
+  // ======================================================================
+  // Browse-style grid of signs, each card showing the name and memory box.
+  function renderSignList(title, subtitle, signs, emptyMsg) {
+    const cards = signs
+      .map((s) =>
+        signCard(s, `memory ${progress[s.id] ? progress[s.id].box : 0}/5`),
+      )
+      .join("");
+    view.innerHTML = `
+      ${backBar()}
+      <h1>${esc(title)}</h1>
+      <p class="sub">${esc(subtitle)}</p>
+      ${
+        signs.length
+          ? `<div class="sign-grid">${cards}</div>`
+          : `<p class="empty">${esc(emptyMsg)}</p>`
+      }`;
+  }
+  // Practised signs, strongest-known first.
+  const byBoxDesc = (a, b) =>
+    (progress[b.id]?.box || 0) - (progress[a.id]?.box || 0) ||
+    a.id.localeCompare(b.id);
+  Views.practised = () => {
+    const signs = POOL.filter((s) => progress[s.id]).sort(byBoxDesc);
+    renderSignList(
+      "Signs practised",
+      `${signs.length} sign${signs.length === 1 ? "" : "s"} you've answered at least once.`,
+      signs,
+      "You haven't practised any signs yet — try Study or a quiz! 🚦",
+    );
+  };
+  Views.wellknown = () => {
+    const signs = POOL.filter(
+      (s) => progress[s.id] && progress[s.id].box >= 4,
+    ).sort(byBoxDesc);
+    renderSignList(
+      "Well known",
+      `${signs.length} sign${signs.length === 1 ? "" : "s"} at memory level 4–5. One miss drops a sign back to 1.`,
+      signs,
+      "Nothing well known yet — answer signs correctly a few times to build them up! 💪",
+    );
+  };
+  Views.weakspots = () => {
+    const signs = weakStats().weak.map((w) => w.s);
+    renderSignList(
+      "Weak spots",
+      `${signs.length} sign${signs.length === 1 ? "" : "s"} you've missed and not yet cleared. See “My weak spots” to drill or dismiss them.`,
+      signs,
+      "No weak spots right now — nice! 🎉",
+    );
+  };
+
+  // ======================================================================
   //  BROWSE (every sign, grouped by category)
   // ======================================================================
   Views.browse = () => {
-    const cats = [];
-    for (const s of ALL) {
-      let c = cats.find((x) => x.key === s.category);
-      if (!c)
-        cats.push(
-          (c = {
-            key: s.category,
-            fi: s.category_fi,
-            en: s.category_en,
-            signs: [],
-          }),
-        );
-      c.signs.push(s);
-    }
-    cats.sort((a, b) => a.key.localeCompare(b.key));
     view.innerHTML = `
       ${backBar()}
       <h1>🔎 All signs</h1>
-      <p class="sub">${ALL.length} signs across ${cats.length} categories.</p>
-      ${cats
-        .map(
-          (c) => `
-        <h2 style="margin-top:24px">${c.key} · ${catLabel(c)}</h2>
-        <div class="menu-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr))">
-          ${c.signs
-            .map(
-              (s) => `
-            <div class="menu-card" style="align-items:center;text-align:center;cursor:default">
-              <div class="signframe sm" style="min-height:96px;width:100%">${signImg(s)}</div>
-              <div class="title" style="font-size:.95rem">${label(s)}</div>
-              <div class="desc">${esc(s.id)}</div>
-            </div>`,
-            )
-            .join("")}
+      <p class="sub">${ALL.length} signs across ${CATS.length} categories.</p>
+      ${CATS.map(
+        (c) => `
+        <h2 class="cat-head">${c.key} · ${catLabel(c)}</h2>
+        <div class="sign-grid">
+          ${c.signs.map((s) => signCard(s, esc(s.id))).join("")}
         </div>`,
-        )
-        .join("")}`;
+      ).join("")}`;
   };
 
   // ---------- boot ----------
