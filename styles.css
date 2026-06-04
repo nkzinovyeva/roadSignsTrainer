@@ -170,10 +170,16 @@ button.stat-chip:disabled { cursor: default; opacity: .55; }
 .confusion { margin-top: 18px; border: 2px dashed var(--amber); background: #fff8ec; border-radius: 14px; padding: 16px; }
 .confusion h3 { margin: 0 0 4px; color: var(--amber); font-size: 1rem; }
 .confusion-grid { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; margin-top: 10px; }
-.confusion-item { text-align: center; width: 130px; }
-.confusion-item img { height: 86px; }
+.confusion-item { text-align: center; width: 130px; max-width: 100%; }
+.confusion-item img { height: 86px; max-width: 100%; width: auto; object-fit: contain; }
 .confusion-item .t { font-size: .82rem; font-weight: 700; margin-top: 4px; }
 .confusion-item .c { font-size: .72rem; color: var(--muted); }
+@media (max-width: 420px){
+  .confusion { padding: 12px; }
+  .confusion-grid { gap: 8px; }
+  .confusion-item { width: calc(50% - 8px); }
+  .confusion-item img { height: 72px; }
+}
 
 /* category list */
 .cat-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 12px; margin-top: 18px; }
