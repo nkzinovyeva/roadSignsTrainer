@@ -253,7 +253,7 @@
       </div>
       <div class="menu-grid">
         ${menuCard("study", "🃏", "Study (flashcards)", "See a sign, recall its meaning, rate yourself. Forgotten signs come back more often.")}
-        ${menuCard("categories", "📚", "Category training", "Pick one group (e.g. priority signs) and take a 10-question quiz.")}
+        ${menuCard("categories", "📚", "Category training", "Pick one group (e.g. priority signs) and choose 10, 20, 30 or max questions.")}
         ${menuCard("examStart", "🎓", "Exam simulator", "20–30 questions, 30 s each, just like the theory test. Pass with few mistakes.")}
         ${menuCard("timeStart", "⚡", "Time attack", "60 seconds. How many can you name in a row? One miss resets the streak.")}
         ${menuCard("stats", "📈", "My weak spots", "The signs you confuse most over the past week.")}
@@ -358,11 +358,24 @@
   // ======================================================================
   //  CATEGORY PICKER
   // ======================================================================
+  const QUIZ_COUNTS = [10, 20, 30, "max"];
   Views.categories = () => {
+    const selected = QUIZ_COUNTS.includes(settings.quizCount)
+      ? settings.quizCount
+      : 10;
     view.innerHTML = `
       ${backBar()}
       <h1>Category training</h1>
-      <p class="sub">Pick a group for a focused 10-question quiz.</p>
+      <p class="sub">Pick a group for a focused quiz.</p>
+      <label class="quiz-count">
+        <span>Questions</span>
+        <select id="quizCount">
+          ${QUIZ_COUNTS.map(
+            (n) =>
+              `<option value="${n}"${n === selected ? " selected" : ""}>${n === "max" ? "Max" : n}</option>`,
+          ).join("")}
+        </select>
+      </label>
       <div class="cat-list">
         ${CATS.map(
           (c) => `
@@ -375,6 +388,11 @@
           </button>`,
         ).join("")}
       </div>`;
+    $("#quizCount").addEventListener("change", (e) => {
+      const v = e.target.value;
+      settings.quizCount = v === "max" ? "max" : +v;
+      saveSettings();
+    });
     view.querySelectorAll(".cat").forEach((b) => {
       b.onclick = () => startQuiz(b.dataset.cat);
     });
@@ -385,7 +403,10 @@
   // ======================================================================
   function startQuiz(catKey) {
     const cat = CATS.find((c) => c.key === catKey);
-    const n = Math.min(10, cat.signs.length);
+    const want = QUIZ_COUNTS.includes(settings.quizCount)
+      ? settings.quizCount
+      : 10;
+    const n = want === "max" ? cat.signs.length : Math.min(want, cat.signs.length);
     const qs = sample(cat.signs, n);
     runQuiz({
       title: catName(cat.fi, cat.en),
@@ -523,19 +544,32 @@
           <label style="margin-left:18px">Max mistakes to pass
             <select id="qmax"><option>2</option><option selected>3</option><option>5</option></select>
           </label>
+          <label style="margin-left:18px">Feedback
+            <select id="qfeedback">
+              <option value="each" selected>After each question</option>
+              <option value="end">All at the end</option>
+            </select>
+          </label>
         </div>
         <button class="btn wide lg" id="startExam" style="margin-top:18px">Start exam</button>
       </div>`;
     $("#startExam").onclick = () =>
-      runExam(+$("#qcount").value, +$("#qtime").value, +$("#qmax").value);
+      runExam(
+        +$("#qcount").value,
+        +$("#qtime").value,
+        +$("#qmax").value,
+        $("#qfeedback").value,
+      );
   };
 
-  function runExam(count, perQ, maxWrong) {
+  function runExam(count, perQ, maxWrong, feedbackMode) {
+    const immediate = feedbackMode !== "end";
     const qs = sample(POOL, Math.min(count, POOL.length));
     let i = 0,
       correctCount = 0,
       timer = null;
     const wrongs = [];
+    const answers = [];
     function step() {
       const q = qs[i];
       const opts = buildOptions(q);
@@ -592,17 +626,26 @@
       logAttempt(q.id, ok);
       if (ok) correctCount++;
       else wrongs.push({ q, chosenId });
+      answers.push({ q, chosenId, ok });
       opts.querySelectorAll(".option").forEach((b) => {
         b.disabled = true;
-        if (b.dataset.id === q.id) b.classList.add("correct");
-        else if (chosenId && b.dataset.id === chosenId)
-          b.classList.add("wrong");
+        if (immediate) {
+          if (b.dataset.id === q.id) b.classList.add("correct");
+          else if (chosenId && b.dataset.id === chosenId)
+            b.classList.add("wrong");
+        } else if (chosenId && b.dataset.id === chosenId) {
+          b.classList.add("chosen");
+        }
       });
       const after = $("#after");
-      after.innerHTML =
-        `<div class="feedback ${ok ? "ok" : "no"}">${ok ? "✓ Correct" : chosenId ? "✗ Wrong" : "⏱ Time up"}</div>` +
-        (ok ? "" : confusionBox(q, BY_ID[chosenId])) +
-        `<button class="btn wide lg" id="next" style="margin-top:14px">${i + 1 < qs.length ? "Next question" : "Finish exam"}</button>`;
+      const nextLabel =
+        i + 1 < qs.length ? "Next question" : "Finish exam";
+      after.innerHTML = immediate
+        ? `<div class="feedback ${ok ? "ok" : "no"}">${ok ? "✓ Correct" : chosenId ? "✗ Wrong" : "⏱ Time up"}</div>` +
+          (ok ? "" : confusionBox(q, BY_ID[chosenId])) +
+          `<button class="btn wide lg" id="next" style="margin-top:14px">${nextLabel}</button>`
+        : `<div class="feedback">${chosenId ? "Answer recorded" : "⏱ Time up"}</div>` +
+          `<button class="btn wide lg" id="next" style="margin-top:14px">${nextLabel}</button>`;
       $("#next").onclick = () => {
         i++;
         i < qs.length ? step() : finish();
@@ -624,17 +667,24 @@
           <div class="scorebar" style="justify-content:center">
             <div class="stat-chip"><b>${correctCount}</b><span>correct</span></div>
             <div class="stat-chip"><b>${wrong}</b><span>mistakes</span></div>
-            <div class="stat-chip"><b>${maxWrong}</b><span>allowed</span></div>
+            <div class="stat-chip"><b>${maxWrong}</b><span>mistakes allowed to pass</span></div>
           </div>
           ${
-            wrong
-              ? `<h2 style="margin-top:10px">Signs to review</h2><div style="text-align:left">${wrongs
-                  .map(
-                    (w) =>
-                      `<div class="weak-row">${signImg(w.q)}<div><b>${primaryName(w.q)}</b><br><span class="cat-sub">${subEn(w.q)}${esc(w.q.id)}</span></div></div>`,
-                  )
+            !immediate
+              ? `<h2 style="margin-top:10px">Answers</h2><div style="text-align:left">${answers
+                  .map((a) => {
+                    const chosen = a.chosenId ? BY_ID[a.chosenId] : null;
+                    return `<div class="weak-row${a.ok ? " ans-ok" : " ans-no"}">${signImg(a.q)}<div><b>${primaryName(a.q)}</b>${settings.answerLang === "both" ? `<br><span class="cat-sub">${esc(a.q.name_en)}</span>` : ""}<br><span class="${a.ok ? "feedback ok" : "feedback no"}">${a.ok ? "✓ Correct" : `✗ You: ${chosen ? primaryName(chosen) : "— (time up)"}`}</span></div></div>`;
+                  })
                   .join("")}</div>`
-              : `<p class="feedback ok">Flawless! 🎉</p>`
+              : wrong
+                ? `<h2 style="margin-top:10px">Signs to review</h2><div style="text-align:left">${wrongs
+                    .map(
+                      (w) =>
+                        `<div class="weak-row">${signImg(w.q)}<div><b>${primaryName(w.q)}</b><br><span class="cat-sub">${subEn(w.q)}${esc(w.q.id)}</span></div></div>`,
+                    )
+                    .join("")}</div>`
+                : `<p class="feedback ok">Flawless! 🎉</p>`
           }
           <div class="row actions">
             <button class="btn" data-nav="examStart">New exam</button>

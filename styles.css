@@ -159,6 +159,7 @@ button.stat-chip:disabled { cursor: default; opacity: .55; }
 .option .opt-en, .title .opt-en { display: block; color: var(--muted); font-size: .85rem; }
 .option.correct { border-color: var(--green); background: #e9f8ef; }
 .option.wrong { border-color: var(--red); background: #fdeceb; }
+.option.chosen { border-color: var(--blue); background: var(--blue-soft); }
 .option:disabled { cursor: default; }
 
 /* timer */
@@ -182,6 +183,11 @@ button.stat-chip:disabled { cursor: default; opacity: .55; }
 }
 
 /* category list */
+.quiz-count { display: inline-flex; align-items: center; gap: 8px; margin-top: 14px; font-size: .9rem; color: var(--muted); }
+.quiz-count select {
+  border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: .9rem;
+  background: var(--card); color: inherit; cursor: pointer;
+}
 .cat-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap: 12px; margin-top: 18px; }
 .cat {
   text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: 12px;
@@ -205,6 +211,9 @@ button.stat-chip:disabled { cursor: default; opacity: .55; }
 /* weakness table */
 .weak-row { display: flex; align-items: center; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--line); }
 .weak-row:last-child { border-bottom: 0; }
+.weak-row.ans-ok { border-left: 4px solid var(--green); padding-left: 10px; }
+.weak-row.ans-no { border-left: 4px solid var(--red); padding-left: 10px; }
+.weak-row .feedback { text-align: left; margin-top: 2px; font-size: .85rem; }
 .weak-row img { height: 54px; width: 54px; object-fit: contain; }
 .weak-bar { flex: 1; height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; }
 .weak-bar > i { display: block; height: 100%; background: var(--red); }
